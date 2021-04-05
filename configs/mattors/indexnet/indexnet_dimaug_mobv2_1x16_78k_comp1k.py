@@ -15,7 +15,7 @@ test_cfg = dict(metrics=['SAD', 'MSE', 'GRAD', 'CONN'])
 
 # dataset settings
 dataset_type = 'AdobeComp1kDataset'
-data_root = './data/adobe_composition-1k/'
+data_root = 'data/adobe_composition-1k'
 img_norm_cfg = dict(
     mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], to_rgb=True)
 train_pipeline = [
@@ -70,27 +70,23 @@ test_pipeline = [
     dict(type='ImageToTensor', keys=['merged', 'trimap']),
 ]
 data = dict(
-    # train
-    samples_per_gpu=16,
-    workers_per_gpu=16,
-    drop_last=True,
+    workers_per_gpu=8,
+    train_dataloader=dict(samples_per_gpu=16, drop_last=True),
+    val_dataloader=dict(samples_per_gpu=1),
+    test_dataloader=dict(samples_per_gpu=1),
     train=dict(
         type=dataset_type,
-        ann_file=data_root + 'training_list.json',
+        ann_file=f'{data_root}/training_list.json',
         data_prefix=data_root,
         pipeline=train_pipeline),
-    # validation
-    val_samples_per_gpu=1,
-    val_workers_per_gpu=4,
     val=dict(
         type=dataset_type,
-        ann_file=data_root + 'test_list.json',
+        ann_file=f'{data_root}/test_list.json',
         data_prefix=data_root,
         pipeline=test_pipeline),
-    # test
     test=dict(
         type=dataset_type,
-        ann_file=data_root + 'test_list.json',
+        ann_file=f'{data_root}/test_list.json',
         data_prefix=data_root,
         pipeline=test_pipeline))
 
@@ -106,7 +102,6 @@ lr_config = dict(policy='Step', step=[52000, 67600], gamma=0.1, by_epoch=False)
 # checkpoint saving
 checkpoint_config = dict(interval=2600, by_epoch=False)
 evaluation = dict(interval=2600, save_image=False)
-# yapf:disable
 log_config = dict(
     interval=10,
     hooks=[
@@ -114,7 +109,6 @@ log_config = dict(
         # dict(type='TensorboardLoggerHook'),
         # dict(type='PaviLoggerHook', init_kwargs=dict(project='IndexNet'))
     ])
-# yapf:enable
 
 # runtime settings
 total_iters = 78000

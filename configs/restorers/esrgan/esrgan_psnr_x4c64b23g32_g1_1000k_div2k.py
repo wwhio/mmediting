@@ -69,10 +69,10 @@ test_pipeline = [
 ]
 
 data = dict(
-    # train
-    samples_per_gpu=16,
-    workers_per_gpu=6,
-    drop_last=True,
+    workers_per_gpu=8,
+    train_dataloader=dict(samples_per_gpu=16, drop_last=True),
+    val_dataloader=dict(samples_per_gpu=1),
+    test_dataloader=dict(samples_per_gpu=1),
     train=dict(
         type='RepeatDataset',
         times=1000,
@@ -83,21 +83,17 @@ data = dict(
             ann_file='data/DIV2K/meta_info_DIV2K800sub_GT.txt',
             pipeline=train_pipeline,
             scale=scale)),
-    # val
-    val_samples_per_gpu=1,
-    val_workers_per_gpu=1,
     val=dict(
         type=val_dataset_type,
-        lq_folder='./data/val_set5/Set5_bicLRx4',
-        gt_folder='./data/val_set5/Set5',
+        lq_folder='data/val_set5/Set5_bicLRx4',
+        gt_folder='data/val_set5/Set5',
         pipeline=test_pipeline,
         scale=scale,
         filename_tmpl='{}'),
-    # test
     test=dict(
         type=val_dataset_type,
-        lq_folder='./data/val_set14/Set14_bicLRx4',
-        gt_folder='./data/val_set14/Set14',
+        lq_folder='data/val_set14/Set14_bicLRx4',
+        gt_folder='data/val_set14/Set14',
         pipeline=test_pipeline,
         scale=scale,
         filename_tmpl='{}'))
@@ -110,9 +106,9 @@ total_iters = 1000000
 lr_config = dict(
     policy='CosineRestart',
     by_epoch=False,
-    period=[250000, 250000, 250000, 250000],
+    periods=[250000, 250000, 250000, 250000],
     restart_weights=[1, 1, 1, 1],
-    eta_min=1e-7)
+    min_lr=1e-7)
 
 checkpoint_config = dict(interval=5000, save_optimizer=True, by_epoch=False)
 evaluation = dict(interval=5000, save_image=True, gpu_collect=True)

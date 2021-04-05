@@ -5,7 +5,7 @@ from ..registry import PIPELINES
 
 
 @PIPELINES.register_module()
-class Normalize(object):
+class Normalize:
     """Normalize images with the given mean and std value.
 
     Required keys are the keys in attribute "keys", added or modified keys are
@@ -19,11 +19,12 @@ class Normalize(object):
         to_rgb (bool): Whether to convert channels from BGR to RGB.
     """
 
-    def __init__(self, keys, mean, std, to_rgb=False):
+    def __init__(self, keys, mean, std, to_rgb=False, save_original=False):
         self.keys = keys
         self.mean = np.array(mean, dtype=np.float32)
         self.std = np.array(std, dtype=np.float32)
         self.to_rgb = to_rgb
+        self.save_original = save_original
 
     def __call__(self, results):
         """Call function.
@@ -37,11 +38,17 @@ class Normalize(object):
         """
         for key in self.keys:
             if isinstance(results[key], list):
+                if self.save_original:
+                    results[key + '_unnormalised'] = [
+                        v.copy() for v in results[key]
+                    ]
                 results[key] = [
                     mmcv.imnormalize(v, self.mean, self.std, self.to_rgb)
                     for v in results[key]
                 ]
             else:
+                if self.save_original:
+                    results[key + '_unnormalised'] = results[key].copy()
                 results[key] = mmcv.imnormalize(results[key], self.mean,
                                                 self.std, self.to_rgb)
 
@@ -58,7 +65,7 @@ class Normalize(object):
 
 
 @PIPELINES.register_module()
-class RescaleToZeroOne(object):
+class RescaleToZeroOne:
     """Transform the images into a range between 0 and 1.
 
     Required keys are the keys in attribute "keys", added or modified keys are

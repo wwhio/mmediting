@@ -76,13 +76,10 @@ test_pipeline = [
         keys=['img_a', 'img_b'],
         meta_keys=['img_a_path', 'img_b_path'])
 ]
-data_root = './data/paired/maps'
+data_root = 'data/paired/maps'
 data = dict(
     samples_per_gpu=1,
     workers_per_gpu=4,
-    drop_last=True,
-    val_samples_per_gpu=1,
-    val_workers_per_gpu=0,
     train=dict(
         type=train_dataset_type,
         dataroot=data_root,

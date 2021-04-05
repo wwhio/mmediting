@@ -1,5 +1,6 @@
 import warnings
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from mmcv.cnn.utils.weight_init import xavier_init
@@ -20,7 +21,6 @@ class MaxUnpool2dop(Function):
     def forward(ctx, input, indices, kernel_size, stride, padding,
                 output_size):
         """Forward function of MaxUnpool2dop.
-
         Args:
             input (Tensor): Tensor needed to upsample.
             indices (Tensor): Indices output of the previous MaxPool.
@@ -28,7 +28,6 @@ class MaxUnpool2dop(Function):
             stride (Tuple): Stride of the max pooling window.
             padding (Tuple): Padding that was added to the input.
             output_size (List or Tuple): The shape of output tensor.
-
         Returns:
             Tensor: Output tensor.
         """
@@ -50,7 +49,6 @@ class MaxUnpool2dop(Function):
 
 class MaxUnpool2d(_MaxUnpoolNd):
     """This module is modified from Pytorch `MaxUnpool2d` module.
-
     Args:
       kernel_size (int or tuple): Size of the max pooling window.
       stride (int or tuple): Stride of the max pooling window.
@@ -67,13 +65,11 @@ class MaxUnpool2d(_MaxUnpoolNd):
 
     def forward(self, input, indices, output_size=None):
         """Forward function of MaxUnpool2d.
-
         Args:
             input (Tensor): Tensor needed to upsample.
             indices (Tensor): Indices output of the previous MaxPool.
             output_size (List or Tuple): The shape of output tensor.
                 Default: None.
-
         Returns:
             Tensor: Output tensor.
         """
@@ -90,7 +86,7 @@ class PlainDecoder(nn.Module):
     """
 
     def __init__(self, in_channels):
-        super(PlainDecoder, self).__init__()
+        super().__init__()
 
         self.deconv6_1 = nn.Conv2d(in_channels, 512, kernel_size=1)
         self.deconv5_1 = nn.Conv2d(512, 512, kernel_size=5, padding=2)
@@ -102,7 +98,8 @@ class PlainDecoder(nn.Module):
         self.deconv1 = nn.Conv2d(64, 1, kernel_size=5, padding=2)
 
         self.relu = nn.ReLU(inplace=True)
-        self.max_unpool2d = MaxUnpool2d(kernel_size=2, stride=2)
+        self.max_unpool2d_for_onnx = MaxUnpool2d(kernel_size=2, stride=2)
+        self.max_unpool2d = nn.MaxUnpool2d(kernel_size=2, stride=2)
 
     def init_weights(self):
         """Init weights for the module.
@@ -139,20 +136,24 @@ class PlainDecoder(nn.Module):
         max_idx_5 = inputs['max_idx_5']
         x = inputs['out']
 
+        max_unpool2d = self.max_unpool2d
+        if torch.onnx.is_in_onnx_export():
+            max_unpool2d = self.max_unpool2d_for_onnx
+
         out = self.relu(self.deconv6_1(x))
-        out = self.max_unpool2d(out, max_idx_5)
+        out = max_unpool2d(out, max_idx_5)
 
         out = self.relu(self.deconv5_1(out))
-        out = self.max_unpool2d(out, max_idx_4)
+        out = max_unpool2d(out, max_idx_4)
 
         out = self.relu(self.deconv4_1(out))
-        out = self.max_unpool2d(out, max_idx_3)
+        out = max_unpool2d(out, max_idx_3)
 
         out = self.relu(self.deconv3_1(out))
-        out = self.max_unpool2d(out, max_idx_2)
+        out = max_unpool2d(out, max_idx_2)
 
         out = self.relu(self.deconv2_1(out))
-        out = self.max_unpool2d(out, max_idx_1)
+        out = max_unpool2d(out, max_idx_1)
 
         out = self.relu(self.deconv1_1(out))
         raw_alpha = self.deconv1(out)

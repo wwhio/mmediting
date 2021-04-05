@@ -71,13 +71,18 @@ def main():
     # build the dataloader
     # TODO: support multiple images per gpu (only minor changes are needed)
     dataset = build_dataset(cfg.data.test)
-    data_loader = build_dataloader(
-        dataset,
-        samples_per_gpu=1,
-        workers_per_gpu=cfg.data.get('val_workers_per_gpu',
-                                     cfg.data.workers_per_gpu),
-        dist=distributed,
-        shuffle=False)
+
+    loader_cfg = {
+        **dict((k, cfg.data[k]) for k in ['workers_per_gpu'] if k in cfg.data),
+        **dict(
+            samples_per_gpu=1,
+            drop_last=False,
+            shuffle=False,
+            dist=distributed),
+        **cfg.data.get('test_dataloader', {})
+    }
+
+    data_loader = build_dataloader(dataset, **loader_cfg)
 
     # build the model and load checkpoint
     model = build_model(cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)

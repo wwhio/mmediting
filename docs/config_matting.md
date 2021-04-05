@@ -32,7 +32,7 @@ test_cfg = dict(  # Config of testing DIM model.
 
 # data settings
 dataset_type = 'AdobeComp1kDataset'  # Dataset type, this will be used to define the dataset.
-data_root = './data/adobe_composition-1k/'  # Root path of data.
+data_root = 'data/adobe_composition-1k'  # Root path of data.
 img_norm_cfg = dict(  # Image normalization config to normalize the input images.
     mean=[0.485, 0.456, 0.406],  # Mean values used to pre-training the pre-trained backbone models.
     std=[0.229, 0.224, 0.225],  # Standard variance used to pre-training the pre-trained backbone models.
@@ -123,17 +123,17 @@ data = dict(
     drop_last=True,  # Use drop_last in data_loader.
     train=dict(  # Train dataset config.
         type=dataset_type,  # Type of dataset.
-        ann_file=data_root + 'training_list.json',  # Path of annotation file
+        ann_file=f'{data_root}/training_list.json',  # Path of annotation file
         data_prefix=data_root,  # Prefix of image path.
         pipeline=train_pipeline),  # See above for train_pipeline
     val=dict(  # Validation dataset config.
         type=dataset_type,
-        ann_file=data_root + 'test_list.json',
+        ann_file=f'{data_root}/test_list.json',
         data_prefix=data_root,
         pipeline=test_pipeline),  # See above for test_pipeline
     test=dict(  # Test dataset config.
         type=dataset_type,
-        ann_file=data_root + 'test_list.json',
+        ann_file=f'{data_root}/test_list.json',
         data_prefix=data_root,
         pipeline=test_pipeline))  # See above for test_pipeline
 
@@ -141,7 +141,7 @@ data = dict(
 optimizers = dict(type='Adam', lr=0.00001)  # Config used to build optimizer, support all the optimizers in PyTorch whose arguments are also the same as those in PyTorch.
 # learning policy
 lr_config = dict(  # Learning rate scheduler config used to register LrUpdater hook
-    policy='Fixed')  # The policy of scheduler, also support CosineAnealing, Cyclic, etc. Refer to details of supported LrUpdater from https://github.com/open-mmlab/mmcv/blob/master/mmcv/runner/hooks/lr_updater.py#L9.
+    policy='Fixed')  # The policy of scheduler, also support CosineAnnealing, Cyclic, etc. Refer to details of supported LrUpdater from https://github.com/open-mmlab/mmcv/blob/master/mmcv/runner/hooks/lr_updater.py#L9.
 
 # checkpoint saving
 checkpoint_config = dict(  # Config to set the checkpoint hook, Refer to https://github.com/open-mmlab/mmcv/blob/master/mmcv/runner/hooks/checkpoint.py for implementation.

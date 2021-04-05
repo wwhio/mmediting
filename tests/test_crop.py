@@ -8,7 +8,7 @@ from mmedit.datasets.pipelines import (Crop, CropAroundCenter, CropAroundFg,
                                        PairedRandomCrop)
 
 
-class TestAugmentations(object):
+class TestAugmentations:
 
     @classmethod
     def setup_class(cls):
@@ -315,7 +315,7 @@ class TestAugmentations(object):
             # keys must contain 'seg'
             CropAroundFg(['fg', 'bg'])
         with pytest.raises(TypeError):
-            # bd_ratio_range must be a tuple of 2 flaot
+            # bd_ratio_range must be a tuple of 2 float
             CropAroundFg(['seg', 'merged'], bd_ratio_range=0.1)
 
         keys = ['bg', 'merged', 'seg']

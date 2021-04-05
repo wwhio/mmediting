@@ -4,6 +4,7 @@ import random
 import cv2
 import mmcv
 import numpy as np
+from mmcv.fileio import FileClient
 
 from ..registry import PIPELINES
 from .utils import adjust_gamma, random_choose_unknown
@@ -18,7 +19,7 @@ def add_gaussian_noise(img, mu, sigma):
 
 
 @PIPELINES.register_module()
-class MergeFgAndBg(object):
+class MergeFgAndBg:
     """Composite foreground image and background image with alpha.
 
     Required keys are "alpha", "fg" and "bg", added key is "merged".
@@ -41,9 +42,13 @@ class MergeFgAndBg(object):
         results['merged'] = merged
         return results
 
+    def __repr__(self) -> str:
+        repr_str = self.__class__.__name__
+        return repr_str
+
 
 @PIPELINES.register_module()
-class GenerateTrimap(object):
+class GenerateTrimap:
     """Using random erode/dilate to generate trimap from alpha matte.
 
     Required key is "alpha", added key is "trimap".
@@ -138,7 +143,7 @@ class GenerateTrimap(object):
 
 
 @PIPELINES.register_module()
-class GenerateTrimapWithDistTransform(object):
+class GenerateTrimapWithDistTransform:
     """Generate trimap with distance transform function.
 
     Args:
@@ -190,7 +195,7 @@ class GenerateTrimapWithDistTransform(object):
 
 
 @PIPELINES.register_module()
-class CompositeFg(object):
+class CompositeFg:
     """Composite foreground with a random foreground.
 
     This class composites the current training sample with additional data
@@ -218,7 +223,12 @@ class CompositeFg(object):
             the randomly loaded images.
     """
 
-    def __init__(self, fg_dirs, alpha_dirs, interpolation='nearest'):
+    def __init__(self,
+                 fg_dirs,
+                 alpha_dirs,
+                 interpolation='nearest',
+                 io_backend='disk',
+                 **kwargs):
         self.fg_dirs = fg_dirs if isinstance(fg_dirs, list) else [fg_dirs]
         self.alpha_dirs = alpha_dirs if isinstance(alpha_dirs,
                                                    list) else [alpha_dirs]
@@ -226,6 +236,9 @@ class CompositeFg(object):
 
         self.fg_list, self.alpha_list = self._get_file_list(
             self.fg_dirs, self.alpha_dirs)
+        self.io_backend = io_backend
+        self.file_client = None
+        self.kwargs = kwargs
 
     def __call__(self, results):
         """Call function.
@@ -237,6 +250,8 @@ class CompositeFg(object):
         Returns:
             dict: A dict containing the processed data and information.
         """
+        if self.file_client is None:
+            self.file_client = FileClient(self.io_backend, **self.kwargs)
         fg = results['fg']
         alpha = results['alpha'].astype(np.float32) / 255.
         h, w = results['fg'].shape[:2]
@@ -244,8 +259,10 @@ class CompositeFg(object):
         # randomly select fg
         if np.random.rand() < 0.5:
             idx = np.random.randint(len(self.fg_list))
-            fg2 = mmcv.imread(self.fg_list[idx])
-            alpha2 = mmcv.imread(self.alpha_list[idx], 'grayscale')
+            fg2_bytes = self.file_client.get(self.fg_list[idx])
+            fg2 = mmcv.imfrombytes(fg2_bytes)
+            alpha2_bytes = self.file_client.get(self.alpha_list[idx])
+            alpha2 = mmcv.imfrombytes(alpha2_bytes, flag='grayscale')
             alpha2 = alpha2.astype(np.float32) / 255.
 
             fg2 = mmcv.imresize(fg2, (w, h), interpolation=self.interpolation)
@@ -292,7 +309,7 @@ class CompositeFg(object):
 
 
 @PIPELINES.register_module()
-class GenerateSeg(object):
+class GenerateSeg:
     """Generate segmentation mask from alpha matte.
 
     Args:
@@ -373,7 +390,7 @@ class GenerateSeg(object):
 
         # generate some holes in segmentation mask
         num_holes = np.random.randint(*self.num_holes_range)
-        for i in range(num_holes):
+        for _ in range(num_holes):
             hole_size = random.choice(self.hole_sizes)
             unknown = trimap == 128
             start_point = random_choose_unknown(unknown, hole_size)
@@ -399,7 +416,7 @@ class GenerateSeg(object):
 
 
 @PIPELINES.register_module()
-class PerturbBg(object):
+class PerturbBg:
     """Randomly add gaussian noise or gamma change to background image.
 
     Required key is "bg", added key is "noisy_bg".
@@ -426,7 +443,7 @@ class PerturbBg(object):
             dict: A dict containing the processed data and information.
         """
         if np.random.rand() >= self.gamma_ratio:
-            # generate gaussian noise with random guassian N([-7, 7), [2, 6))
+            # generate gaussian noise with random gaussian N([-7, 7), [2, 6))
             mu = np.random.randint(-7, 7)
             sigma = np.random.randint(2, 6)
             results['noisy_bg'] = add_gaussian_noise(results['bg'], mu, sigma)
@@ -441,13 +458,13 @@ class PerturbBg(object):
 
 
 @PIPELINES.register_module()
-class GenerateSoftSeg(object):
+class GenerateSoftSeg:
     """Generate soft segmentation mask from input segmentation mask.
 
     Required key is "seg", added key is "soft_seg".
 
     Args:
-        fg_thr (float, optional): Threhold of the foreground in the normalized
+        fg_thr (float, optional): Threshold of the foreground in the normalized
             input segmentation mask. Defaults to 0.2.
         border_width (int, optional): Width of border to be padded to the
             bottom of the mask. Defaults to 25.
@@ -514,7 +531,7 @@ class GenerateSoftSeg(object):
             dict: A dict containing the processed data and information.
         """
         seg = results['seg'].astype(np.float32) / 255
-        height, width = seg.shape[:2]
+        height, _ = seg.shape[:2]
         seg[seg > self.fg_thr] = 1
 
         # to align with the original repo, pad the bottom of the mask
@@ -554,4 +571,58 @@ class GenerateSoftSeg(object):
                      f'erode_iter_range={self.erode_iter_range}, '
                      f'dilate_iter_range={self.dilate_iter_range}, '
                      f'blur_ksizes={self.blur_ksizes})')
+        return repr_str
+
+
+@PIPELINES.register_module()
+class TransformTrimap:
+    """Transform trimap into two-channel and six-channel.
+
+    This calss will generate a two-channel trimap composed of definite
+    foreground and backgroud masks and encode it into a six-channel trimap
+    using Gaussian blurs of the generated two-channel trimap at three
+    different scales. The transformed trimap has 6 channels.
+
+    Required key is "trimap", added key is "transformed_trimap" and
+    "two_channel_trimap".
+
+    Adopted from the following repository:
+    https://github.com/MarcoForte/FBA_Matting/blob/master/networks/transforms.py.
+
+    """
+
+    def __call__(self, results):
+        """Call function.
+
+        Args:
+            results (dict): A dict containing the necessary information and
+                data for augmentation.
+
+        Returns:
+            dict: A dict containing the processed data and information.
+        """
+        trimap = results['trimap']
+        assert len(trimap.shape) == 2
+        h, w = trimap.shape[:2]
+        # generate two-channel trimap
+        trimap2 = np.zeros((h, w, 2), dtype=np.uint8)
+        trimap2[trimap == 0, 0] = 255
+        trimap2[trimap == 255, 1] = 255
+        trimap_trans = np.zeros((h, w, 6), dtype=np.float32)
+        factor = np.array([[[0.02, 0.08, 0.16]]], dtype=np.float32)
+        for k in range(2):
+            if np.any(trimap2[:, :, k]):
+                dt_mask = -cv2.distanceTransform(255 - trimap2[:, :, k],
+                                                 cv2.DIST_L2, 0)**2
+                dt_mask = dt_mask[..., None]
+                L = 320
+                trimap_trans[..., 3 * k:3 * k + 3] = np.exp(
+                    dt_mask / (2 * ((factor * L)**2)))
+
+        results['transformed_trimap'] = trimap_trans
+        results['two_channel_trimap'] = trimap2
+        return results
+
+    def __repr__(self):
+        repr_str = self.__class__.__name__
         return repr_str

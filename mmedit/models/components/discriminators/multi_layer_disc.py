@@ -15,7 +15,7 @@ class MultiLayerDiscriminator(nn.Module):
 
     Args:
         in_channels (int): Input channel of the first input convolution.
-        max_channels (int): The maxinum channel number in this structure.
+        max_channels (int): The maximum channel number in this structure.
         num_conv (int): Number of stacked intermediate convs (including input
             conv but excluding output conv).
         fc_in_channels (int | None): Input dimension of the fully connected
@@ -56,7 +56,7 @@ class MultiLayerDiscriminator(nn.Module):
                  with_out_convs=False,
                  with_spectral_norm=False,
                  **kwargs):
-        super(MultiLayerDiscriminator, self).__init__()
+        super().__init__()
         if fc_in_channels is not None:
             assert fc_in_channels > 0
 

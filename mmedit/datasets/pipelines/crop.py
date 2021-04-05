@@ -1,5 +1,3 @@
-import random
-
 import mmcv
 import numpy as np
 from torch.nn.modules.utils import _pair
@@ -9,7 +7,7 @@ from .utils import random_choose_unknown
 
 
 @PIPELINES.register_module()
-class Crop(object):
+class Crop:
     """Crop data to specific size for training.
 
     Args:
@@ -30,23 +28,36 @@ class Crop(object):
         self.random_crop = random_crop
 
     def _crop(self, data):
-        data_h, data_w = data.shape[:2]
-        crop_h, crop_w = self.crop_size
-        crop_h = min(data_h, crop_h)
-        crop_w = min(data_w, crop_w)
-
-        if self.random_crop:
-            x_offset = np.random.randint(0, data_w - crop_w + 1)
-            y_offset = np.random.randint(0, data_h - crop_h + 1)
+        if not isinstance(data, list):
+            data_list = [data]
         else:
-            x_offset = max(0, (data_w - crop_w)) // 2
-            y_offset = max(0, (data_h - crop_h)) // 2
+            data_list = data
 
-        crop_bbox = [x_offset, y_offset, crop_w, crop_h]
-        data_ = data[y_offset:y_offset + crop_h, x_offset:x_offset + crop_w,
-                     ...]
+        crop_bbox_list = []
+        data_list_ = []
 
-        return data_, crop_bbox
+        for item in data_list:
+            data_h, data_w = item.shape[:2]
+            crop_h, crop_w = self.crop_size
+            crop_h = min(data_h, crop_h)
+            crop_w = min(data_w, crop_w)
+
+            if self.random_crop:
+                x_offset = np.random.randint(0, data_w - crop_w + 1)
+                y_offset = np.random.randint(0, data_h - crop_h + 1)
+            else:
+                x_offset = max(0, (data_w - crop_w)) // 2
+                y_offset = max(0, (data_h - crop_h)) // 2
+
+            crop_bbox = [x_offset, y_offset, crop_w, crop_h]
+            item_ = item[y_offset:y_offset + crop_h,
+                         x_offset:x_offset + crop_w, ...]
+            crop_bbox_list.append(crop_bbox)
+            data_list_.append(item_)
+
+        if not isinstance(data, list):
+            return data_list_[0], crop_bbox_list[0]
+        return data_list_, crop_bbox_list
 
     def __call__(self, results):
         """Call function.
@@ -74,7 +85,7 @@ class Crop(object):
 
 
 @PIPELINES.register_module()
-class FixedCrop(object):
+class FixedCrop:
     """Crop paired data (at a specific position) to specific size for training.
 
     Args:
@@ -152,7 +163,7 @@ class FixedCrop(object):
 
 
 @PIPELINES.register_module()
-class PairedRandomCrop(object):
+class PairedRandomCrop:
     """Paried random crop.
 
     It crops a pair of lq and gt images with corresponding locations.
@@ -201,8 +212,8 @@ class PairedRandomCrop(object):
                 f'{results["lq_path"][0]} and {results["gt_path"][0]}.')
 
         # randomly choose top and left coordinates for lq patch
-        top = random.randint(0, h_lq - lq_patch_size)
-        left = random.randint(0, w_lq - lq_patch_size)
+        top = np.random.randint(h_lq - lq_patch_size + 1)
+        left = np.random.randint(w_lq - lq_patch_size + 1)
         # crop lq patch
         results['lq'] = [
             v[top:top + lq_patch_size, left:left + lq_patch_size, ...]
@@ -228,7 +239,7 @@ class PairedRandomCrop(object):
 
 
 @PIPELINES.register_module()
-class CropAroundCenter(object):
+class CropAroundCenter:
     """Randomly crop the images around unknown area in the center 1/4 images.
 
     This cropping strategy is adopted in GCA matting. The `unknown area` is the
@@ -316,7 +327,7 @@ class CropAroundCenter(object):
 
 
 @PIPELINES.register_module()
-class CropAroundUnknown(object):
+class CropAroundUnknown:
     """Crop around unknown area with a randomly selected scale.
 
     Randomly select the w and h from a list of (w, h).
@@ -359,7 +370,7 @@ class CropAroundUnknown(object):
         if unknown_source not in ['alpha', 'trimap']:
             raise ValueError('unknown_source must be "alpha" or "trimap", '
                              f'but got {unknown_source}')
-        elif unknown_source not in keys:
+        if unknown_source not in keys:
             # it could only be trimap, since alpha is checked before
             raise ValueError(
                 'if unknown_source is "trimap", it must also be set in keys')
@@ -423,7 +434,7 @@ class CropAroundUnknown(object):
 
 
 @PIPELINES.register_module()
-class CropAroundFg(object):
+class CropAroundFg:
     """Crop around the whole foreground in the segmentation mask.
 
     Required keys are "seg" and the keys in argument `keys`.
@@ -494,7 +505,7 @@ class CropAroundFg(object):
 
 
 @PIPELINES.register_module()
-class ModCrop(object):
+class ModCrop:
     """Mod crop gt images, used during testing.
 
     Required keys are "scale" and "gt",

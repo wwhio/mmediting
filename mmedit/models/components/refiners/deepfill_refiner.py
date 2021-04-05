@@ -38,7 +38,7 @@ class DeepFillRefiner(nn.Module):
                  contextual_attention=dict(
                      type='ContextualAttentionNeck', in_channels=128),
                  decoder=dict(type='DeepFillDecoder', in_channels=256)):
-        super(DeepFillRefiner, self).__init__()
+        super().__init__()
         self.encoder_attention = build_component(encoder_attention)
         self.encoder_conv = build_component(encoder_conv)
         self.contextual_attention_neck = build_component(contextual_attention)
@@ -62,7 +62,7 @@ class DeepFillRefiner(nn.Module):
         # contextual attention branch
         attention_x = self.encoder_attention(x)['out']
         h_x, w_x = attention_x.shape[-2:]
-        # resale mask to a samller size
+        # resale mask to a smaller size
         resized_mask = F.interpolate(mask, size=(h_x, w_x))
         attention_x, offset = self.contextual_attention_neck(
             attention_x, resized_mask)

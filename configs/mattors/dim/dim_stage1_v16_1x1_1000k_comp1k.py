@@ -13,7 +13,7 @@ test_cfg = dict(refine=False, metrics=['SAD', 'MSE', 'GRAD', 'CONN'])
 
 # dataset settings
 dataset_type = 'AdobeComp1kDataset'
-data_root = './data/adobe_composition-1k/'
+data_root = 'data/adobe_composition-1k'
 img_norm_cfg = dict(
     mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], to_rgb=True)
 train_pipeline = [
@@ -70,20 +70,19 @@ test_pipeline = [
 data = dict(
     samples_per_gpu=1,
     workers_per_gpu=4,
-    drop_last=False,
     train=dict(
         type=dataset_type,
-        ann_file=data_root + 'training_list.json',
+        ann_file=f'{data_root}/training_list.json',
         data_prefix=data_root,
         pipeline=train_pipeline),
     val=dict(
         type=dataset_type,
-        ann_file=data_root + 'test_list.json',
+        ann_file=f'{data_root}/test_list.json',
         data_prefix=data_root,
         pipeline=test_pipeline),
     test=dict(
         type=dataset_type,
-        ann_file=data_root + 'test_list.json',
+        ann_file=f'{data_root}/test_list.json',
         data_prefix=data_root,
         pipeline=test_pipeline))
 
@@ -95,7 +94,6 @@ lr_config = dict(policy='Fixed')
 # checkpoint saving
 checkpoint_config = dict(interval=40000, by_epoch=False)
 evaluation = dict(interval=40000, save_image=False)
-# yapf:disable
 log_config = dict(
     interval=10,
     hooks=[
@@ -103,7 +101,6 @@ log_config = dict(
         # dict(type='TensorboardLoggerHook'),
         # dict(type='PaviLoggerHook', init_kwargs=dict(project='dim'))
     ])
-# yapf:enable
 
 # runtime settings
 total_iters = 1000000

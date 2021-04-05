@@ -79,30 +79,27 @@ test_pipeline = [
 ]
 
 data = dict(
-    # train
-    samples_per_gpu=4,
-    workers_per_gpu=3,
-    drop_last=True,
+    workers_per_gpu=4,
+    train_dataloader=dict(samples_per_gpu=4, drop_last=True),
+    val_dataloader=dict(samples_per_gpu=1),
+    test_dataloader=dict(samples_per_gpu=1),
     train=dict(
         type='RepeatDataset',
         times=1000,
         dataset=dict(
             type=train_dataset_type,
-            lq_folder='./data/REDS/train_sharp_bicubic/X4',
-            gt_folder='./data/REDS/train_sharp',
+            lq_folder='data/REDS/train_sharp_bicubic/X4',
+            gt_folder='data/REDS/train_sharp',
             ann_file='data/REDS/meta_info_REDS_GT.txt',
             num_input_frames=5,
             pipeline=train_pipeline,
             scale=4,
             val_partition='REDS4',
             test_mode=False)),
-    # val
-    val_samples_per_gpu=1,
-    val_workers_per_gpu=1,
     val=dict(
         type=val_dataset_type,
-        lq_folder='./data/REDS/train_sharp_bicubic/X4',
-        gt_folder='./data/REDS/train_sharp',
+        lq_folder='data/REDS/train_sharp_bicubic/X4',
+        gt_folder='data/REDS/train_sharp',
         ann_file='data/REDS/meta_info_REDS_GT.txt',
         num_input_frames=5,
         pipeline=test_pipeline,
@@ -111,8 +108,8 @@ data = dict(
         test_mode=True),
     test=dict(
         type=val_dataset_type,
-        lq_folder='./data/REDS/train_sharp_bicubic/X4',
-        gt_folder='./data/REDS/train_sharp',
+        lq_folder='data/REDS/train_sharp_bicubic/X4',
+        gt_folder='data/REDS/train_sharp',
         ann_file='data/REDS/meta_info_REDS_GT.txt',
         num_input_frames=5,
         pipeline=test_pipeline,

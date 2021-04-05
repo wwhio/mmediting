@@ -54,7 +54,8 @@ def test_load_image_from_file():
     assert repr(image_loader) == (
         image_loader.__class__.__name__ +
         ('(io_backend=disk, key=lq, '
-         'flag=color, save_original_img=False)'))
+         'flag=color, save_original_img=False, channel_order=bgr, '
+         'use_cache=False)'))
 
     results = dict(lq_path=path_baboon_x4)
     config = dict(
@@ -65,6 +66,23 @@ def test_load_image_from_file():
     assert results['lq_ori_shape'] == (120, 125)
     np.testing.assert_almost_equal(results['ori_lq'], results['lq'])
     assert id(results['ori_lq']) != id(results['lq'])
+
+    # test: use_cache
+    results = dict(gt_path=path_baboon)
+    config = dict(io_backend='disk', key='gt', use_cache=True)
+    image_loader = LoadImageFromFile(**config)
+    assert image_loader.cache is None
+    assert repr(image_loader) == (
+        image_loader.__class__.__name__ +
+        ('(io_backend=disk, key=gt, '
+         'flag=color, save_original_img=False, channel_order=bgr, '
+         'use_cache=True)'))
+    results = image_loader(results)
+    assert image_loader.cache is not None
+    assert str(path_baboon) in image_loader.cache
+    assert results['gt'].shape == (480, 500, 3)
+    assert results['gt_path'] == str(path_baboon)
+    np.testing.assert_almost_equal(results['gt'], img_baboon)
 
 
 def test_load_image_from_file_list():
@@ -107,7 +125,7 @@ def test_load_image_from_file_list():
         image_loader(results)
 
 
-class TestMattingLoading(object):
+class TestMattingLoading:
 
     @staticmethod
     def check_keys_contain(result_keys, target_keys):
@@ -140,7 +158,7 @@ class TestMattingLoading(object):
             "(bg_dir='tests/data/bg')")
 
 
-class TestInpaintLoading(object):
+class TestInpaintLoading:
 
     @classmethod
     def setup_class(cls):
@@ -229,7 +247,7 @@ class TestInpaintLoading(object):
             results = loader(results)
 
 
-class TestGenerationLoading(object):
+class TestGenerationLoading:
 
     @staticmethod
     def check_keys_contain(result_keys, target_keys):
